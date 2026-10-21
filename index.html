@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinema Ticket Queue Simulation</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-pink: #f43f5e;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .browser-window {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        .browser-header {
+            background: #090d16;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .browser-dots { display: flex; gap: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #22c55e; }
+
+        .browser-address-bar {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 14px;
+            color: var(--accent-pink);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .app-container {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media(max-width: 768px) {
+            .app-container { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        h2 { font-size: 1.15rem; color: var(--accent-pink); display: flex; align-items: center; gap: 8px; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+
+        input, select {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-pink);
+        }
+
+        button {
+            background: var(--accent-pink);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 11px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+        button.secondary { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+
+        /* Ticket Booth Status */
+        .booth-box {
+            background: #090d16;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .booth-box h3 { color: var(--accent-purple); font-size: 1.05rem; }
+        .booth-box p { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+
+        /* Queue Line Container */
+        .queue-line {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            min-height: 80px;
+            align-items: center;
+        }
+
+        .ticket-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-top: 4px solid var(--accent-purple);
+            border-radius: 6px;
+            padding: 10px 14px;
+            min-width: 170px;
+            flex-shrink: 0;
+        }
+
+        .ticket-card .pos { font-size: 0.75rem; color: var(--accent-purple); font-weight: 700; }
+        .ticket-card .name { font-weight: 700; font-size: 0.9rem; margin: 2px 0; }
+        .ticket-card .movie { font-size: 0.75rem; color: var(--text-muted); }
+
+        .empty-queue { color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
+
+        /* Console Logs */
+        .logs {
+            background: #090d16;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 100px;
+            overflow-y: auto;
+            color: var(--text-muted);
+        }
+        .log-entry { margin-bottom: 4px; }
+        .badge { background: var(--border-color); color: var(--text-main); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+
+    <div class="browser-window">
+        <!-- Browser Header Chrome -->
+        <div class="browser-header">
+            <div class="browser-dots">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+            </div>
+            <div class="browser-address-bar">
+                🎟️ https://github.com/adwoa-boateng003/cinema-queue-app
+            </div>
+        </div>
+
+        <div class="app-container">
+            <!-- Left: Add Customer to Line -->
+            <div class="panel">
+                <h2>🎟️ Join Ticket Line</h2>
+                <div class="form-group">
+                    <label for="custName">Customer Name</label>
+                    <input type="text" id="custName" placeholder="e.g., Kofi Mensah">
+                </div>
+                <div class="form-group">
+                    <label for="movieChoice">Select Movie</label>
+                    <select id="movieChoice">
+                        <option value="Avengers: Secret Wars">Avengers: Secret Wars</option>
+                        <option value="Black Panther: Wakanda">Black Panther: Wakanda</option>
+                        <option value="Spider-Man: Beyond">Spider-Man: Beyond</option>
+                        <option value="Interstellar (IMAX)">Interstellar (IMAX)</option>
+                    </select>
+                </div>
+                <button onclick="enqueueCustomer()">Get in Line (Enqueue)</button>
+                <button class="secondary" onclick="loadSampleQueue()">Load Friday Night Rush</button>
+            </div>
+
+            <!-- Right: Ticket Booth Station -->
+            <div class="panel">
+                <h2>🏢 Ticket Counter Booth</h2>
+                <div class="booth-box">
+                    <h3 id="boothTitle">Booth is Closed / Idle</h3>
+                    <p id="boothDesc">Waiting for customers to join the line...</p>
+                </div>
+                <button onclick="serveCustomer()" style="background: var(--accent-purple);">Serve Next Customer (Dequeue)</button>
+            </div>
+
+            <!-- Bottom: Live Queue Line -->
+            <div class="panel full-width">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>📋 FIFO Queue Line (Waiting to Buy Tickets)</h2>
+                    <span id="queueCount" class="badge">0 people</span>
+                </div>
+                <div class="queue-line" id="queueContainer">
+                    <div class="empty-queue">The ticket line is currently empty. Add a customer above!</div>
+                </div>
+            </div>
+
+            <!-- Logs Panel -->
+            <div class="panel full-width logs" id="logConsole">
+                <div class="log-entry">[System] Cinema Ticketing Queue initialized successfully. Ready.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Queue array storing customers
+        let ticketQueue = [];
+
+        function logMessage(text) {
+            const consoleBox = document.getElementById('logConsole');
+            const time = new Date().toLocaleTimeString();
+            consoleBox.innerHTML += `<div class="log-entry">[${time}] ${text}</div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        function updateUI() {
+            const container = document.getElementById('queueContainer');
+            const badge = document.getElementById('queueCount');
+            badge.innerText = `${ticketQueue.length} person${ticketQueue.length === 1 ? '' : 's'}`;
+
+            if (ticketQueue.length === 0) {
+                container.innerHTML = `<div class="empty-queue">The ticket line is currently empty. Add a customer above!</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            ticketQueue.forEach((cust, index) => {
+                container.innerHTML += `
+                    <div class="ticket-card">
+                        <div class="pos">Position #${index + 1}</div>
+                        <div class="name">👤 ${cust.name}</div>
+                        <div class="movie">🎬 ${cust.movie}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function enqueueCustomer() {
+            const nameInput = document.getElementById('custName');
+            const movieSelect = document.getElementById('movieChoice');
+
+            const name = nameInput.value.trim() || `Guest #${Math.floor(Math.random() * 900 + 100)}`;
+            const movie = movieSelect.value;
+
+            const newCustomer = { name, movie };
+            ticketQueue.push(newCustomer); // Enqueue operation
+            logMessage(`Enqueued: "${name}" joined the line for "${movie}".`);
+
+            nameInput.value = '';
+            updateUI();
+        }
+
+        function loadSampleQueue() {
+            const samples = [
+                { name: 'Ama Serwaa', movie: 'Avengers: Secret Wars' },
+                { name: 'Yaw Boateng', movie: 'Interstellar (IMAX)' },
+                { name: 'Akosua Frimpong', movie: 'Spider-Man: Beyond' }
+            ];
+            ticketQueue.push(...samples);
+            logMessage(`Loaded Friday night sample queue (${samples.length} people added).`);
+            updateUI();
+        }
+
+        function serveCustomer() {
+            const boothTitle = document.getElementById('boothTitle');
+            const boothDesc = document.getElementById('boothDesc');
+
+            if (ticketQueue.length === 0) {
+                boothTitle.innerText = "Booth is Idle";
+                boothDesc.innerText = "No one is in line!";
+                logMessage(`Attempted to serve, but the queue line is empty.`);
+                return;
+            }
+
+            // Dequeue operation: removes the first person from the front of the queue
+            const servedCustomer = ticketQueue.shift(); 
+            
+            boothTitle.innerText = `Serving: ${servedCustomer.name}`;
+            boothDesc.innerText = `Issued ticket for: ${servedCustomer.movie} 🎟️`;
+            logMessage(`Dequeued: Sold ticket to "${servedCustomer.name}" for "${servedCustomer.movie}".`);
+
+            updateUI();
+        }
+    </script>
+</body>
+</html>
